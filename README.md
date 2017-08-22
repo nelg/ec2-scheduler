@@ -13,6 +13,33 @@ Source code for the AWS solution "EC2 Scheduler".
 
 - code/ec2-scheduler.py
 
+## Building
+
+In order to build this, you will need some python libraries and create a zip file to upload to Lambda / Cloudformation. 
+
+Basic instructions are:
+  cd code
+  pip install boto3 -t .
+  pip install urllib -t .
+  pip install datetime -t .
+  pip install pytz -t .
+  zip  -r ../ec2-scheduler.zip 
+
+### Lambda without cloudformation
+If you want to upload directly to Lambda, replace the code that reads the DynamoDB table from cloudformation with:
+IE: replace
+
+  outputs = {}
+  stack_name = context.invoked_function_arn.split(':')[6].rsplit('-', 2)[0]
+  response = cf.describe_stacks(StackName=stack_name)
+  for e in response['Stacks'][0]['Outputs']:
+      outputs[e['OutputKey']] = e['OutputValue']
+  ddbTableName = outputs['DDBTableName']
+
+with:
+
+  ddbTableName = 'EC2-Scheduler'
+
 ***
 
 Copyright 2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.

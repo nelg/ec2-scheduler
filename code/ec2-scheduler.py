@@ -15,6 +15,8 @@
 import boto3
 import datetime
 import json
+import calendar
+from pytz import timezone
 from urllib2 import Request
 from urllib2 import urlopen
 from collections import Counter
@@ -75,8 +77,8 @@ def lambda_handler(event, context):
     sendData = str(item['SendAnonymousData']).lower()
     createMetrics = str(item['CloudWatchMetrics']).lower()
     UUID = str(item['UUID'])
-    TimeNow = datetime.datetime.utcnow().isoformat()
-    TimeStamp = str(TimeNow)
+    TimeNow = datetime.datetime.now(timezone('UTC'))
+    TimeStamp = str(TimeNow.replace(tzinfo=None).isoformat())
 
     # Declare Dicts
     regionDict = {}
@@ -90,10 +92,6 @@ def lambda_handler(event, context):
             ec2 = boto3.resource('ec2', region_name=region['RegionName'])
 
             awsregion = region['RegionName']
-            now = datetime.datetime.now().strftime("%H%M")
-            nowMax = datetime.datetime.now() - datetime.timedelta(minutes=59)
-            nowMax = nowMax.strftime("%H%M")
-            nowDay = datetime.datetime.today().strftime("%a").lower()
 
             # Declare Lists
             startList = []
@@ -140,11 +138,26 @@ def lambda_handler(event, context):
                             if len(ptag) >= 2:
                                 stopTime = ptag[1]
                             if len(ptag) >= 3:
-                                timeZone = ptag[2].lower()
+                                timeZone = ptag[2]
                             if len(ptag) >= 4:
                                 daysActive = ptag[3].lower()
 
                             isActiveDay = False
+                            print ("Timezone: ", timeZone)
+                            # Calculate per ec2 tag, because timezone can be different
+                            try:
+                              localtz = timezone(timeZone)
+                              print ("Timezone OK")
+                            except:
+                              localtz = timezone(defaultTimeZone)
+                              print ("Timezone REJECTED, defaulting to UTC.  Valid timezones are pytz timezones. Please pick from the list below:")
+                              for tz in pytz.all_timezones:
+                                  print tz
+
+                            now = TimeNow.astimezone(localtz).strftime("%H%M")
+                            nowMax = TimeNow.astimezone(localtz) - datetime.timedelta(minutes=59)
+                            nowMax = nowMax.strftime("%H%M")
+                            nowDay = calendar.day_abbr[TimeNow.astimezone(localtz).weekday()].lower()
 
                             # Days Interpreter
                             if daysActive == "all":
